@@ -1,10 +1,10 @@
 # ClearLease
 
-Clearlease takes a pdf or text of your rental agreement, highlgihts the clauses and parts worth worrying about, checks them through a database of the states' laws and hands back a easy to understand "fairness score" based on those criterias.
+Clearlease takes a pdf or text of your rental agreement, highlights the clauses and parts worth worrying about, checks them through a database of the states' laws and hands back an easy to understand "fairness score" based on those criteria.
 
 ## The problem
 
-Most renters sign a lease they don't fully understand. Predatory clauses such as illegal fees, waived rights, and one-sided liability terms are common and are hard to spot for the average eye. These hit low income renters hardest because they're the least likely to be able to afford a lawyer to check the rental agreement beforehand. Clearlease is a free solution to that problem. They upload a lease and get back exactly which clauses are risky, why they're risky, and what to do about it.
+Most renters sign a lease they don't fully understand. Predatory clauses such as illegal fees, waived rights, and one-sided liability terms are common and are hard to spot for the average eye. These hit low income renters hardest because they're the least likely to be able to afford a lawyer to check the rental agreement beforehand. Clearlease is a free solution to that problem. Renters upload a lease and get back exactly which clauses are risky, why they're risky, and what to do about it.
 
 ## How it works
 
