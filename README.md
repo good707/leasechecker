@@ -1,15 +1,15 @@
 # ClearLease
 
-ClearLease reads a residential lease, flags the clauses worth worrying about, checks them against real tenant-protection law for the lease's state, and hands back a plain-English "fairness score" — so a renter doesn't have to be a lawyer to know what they're signing.
+Clearlease takes a pdf or text of your rental agreement, highlgihts the clauses and parts worth worrying about, checks them through a database of the states' laws and hands back a easy to understand "fairness score" based on those criterias.
 
 ## The problem
 
-Most renters sign a lease they don't fully understand. Predatory clauses — illegal fees, waived rights, one-sided liability terms — are common, hard to spot in dense legal language, and hit low-income renters hardest, since they're the least likely to be able to afford a lawyer to check first. ClearLease is a first line of defense: upload a lease, get back exactly which clauses are risky, why, and what to do about it.
+Most renters sign a lease they don't fully understand. Predatory clauses such as illegal fees, waived rights, and one-sided liability terms are common and are hard to spot for the average eye. These hit low income renters hardest because they're the least likely to be able to afford a lawyer to check the rental agreement beforehand. Clearlease is a free solution to that problem. They upload a lease and get back exactly which clauses are risky, why they're risky, and what to do about it.
 
 ## How it works
 
 1. **Validate** — a quick classifier check confirms the uploaded document is actually a residential lease before spending a full analysis on it.
-2. **Analyze** — the lease text and the tenant-protection law for the selected state are sent to an LLM with a structured prompt that returns a fairness score (0–100), a list of flagged clauses with severity ratings and exact quotes, and a list of things the lease actually gets right — not just a one-sided list of complaints.
+2. **Analyze** — the lease text and the tenant-protection law for the selected state are sent to a Large Language Model with a structured prompt that returns a fairness score (0–100), a list of flagged clauses with severity ratings and exact quotes, and a list of things the lease actually gets right and not just a list of what the agreement did wrong.
 3. **Chat** — for any flagged clause, the renter can ask follow-up questions and get a plain-English answer scoped to that specific clause and state.
 
 Available as both a web app (Next.js) and a native iOS app (SwiftUI), sharing the same backend.
@@ -45,7 +45,7 @@ The iOS app lives in `ClearLease/` and opens directly in Xcode — point `APISer
 
 ## AI tool disclosure
 
-This project was built with substantial help from Claude (Anthropic) and Claude Code, including code generation, debugging, and the state law research for this README's coverage list. Architecture decisions, feature scope, and the final review pass were mine.
+This project was built with substantial help from Claude (Anthropic) and Claude Code, including code generation, debugging, and the state law research for this README's coverage list. The idea, architecture decisions, feature scope, and the final review pass were mine.
 
 ## Status
 
