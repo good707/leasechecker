@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,6 +8,14 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
+    const allowed = await checkRateLimit(req);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a minute and try again." },
+        { status: 429 }
+      );
+    }
+
     const { messages, clauseText, state } = await req.json();
 
     const systemPrompt = `You are a tenant-rights legal assistant helping a renter understand a specific clause in their lease for the state of ${state}.

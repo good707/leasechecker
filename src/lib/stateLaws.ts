@@ -177,6 +177,89 @@ Illegal Clauses in Illinois:
 - Waiving implied warranty of habitability
 - Confession of judgment clauses
 - One-sided attorney fees without reciprocity`,
+
+  PA: `PENNSYLVANIA TENANT PROTECTION LAWS
+Sources: PA Landlord and Tenant Act of 1951, 68 P.S. §§250.101-250.602 (codes maintained by PA General Assembly) | Community Legal Services of Philadelphia | Philadelphia Code §9-804 (local)
+
+Security Deposit:
+- Capped at 2 months' rent during the first year of tenancy — 68 P.S. §250.511a
+- Drops to 1 month's rent starting the second year
+- After 5+ years of continuous occupancy, the deposit amount may not be increased even if rent rises — 68 P.S. §250.511a
+- Deposits over $100 must be escrowed; after 2 years they must earn interest (minus a 1% admin fee) payable to the tenant
+- Must be returned within 30 days of lease end with an itemized list of deductions — 68 P.S. §250.512
+- Bad-faith withholding entitles the tenant to double damages — 68 P.S. §250.512
+
+Rent Increases:
+- No statewide cap on the amount of a rent increase
+- No statewide minimum notice period between lease terms — this is governed entirely by the lease itself unless the property is in Philadelphia
+- Philadelphia only: 30 days notice required (leases under 1 year) or 60 days (1 year+) — Philadelphia Code §9-804
+
+Entry Rights:
+- Pennsylvania has NO statute setting a required notice period or valid reasons for landlord entry — unusually landlord-favorable compared to most states
+- Entry terms are set entirely by the lease itself, backed only by the implied "covenant of quiet enjoyment"
+- 24 hours notice is a common informal practice but is NOT required by state law — a lease silent on entry is not, by itself, a violation
+
+Habitability:
+- Implied warranty of habitability recognized under PA case law (Pugh v. Holmes, 1979) — landlord must maintain the unit fit for living
+- Tenant may withhold rent or repair-and-deduct for serious defects, but must follow strict pre-notice procedures first
+
+Illegal Clauses in Pennsylvania:
+- Confession of judgment / warrant of attorney clauses in a residential lease — banned; enforceable only in commercial leases. Including one in a consumer lease violates PA's Unfair Trade Practices and Consumer Protection Law, entitling the tenant to triple damages and attorney's fees
+- Waiving the landlord's duty to maintain a habitable unit (post-Pugh v. Holmes)
+- Retaliating against a tenant for joining a tenant union — 68 P.S. §250.205`,
+
+  OH: `OHIO TENANT PROTECTION LAWS
+Sources: Ohio Revised Code Chapter 5321 (codes.ohio.gov)
+
+Security Deposit:
+- No statutory cap on the amount a landlord can charge
+- If held 6+ months, the portion of the deposit over $50 or 1 month's rent (whichever is greater) must earn 5% annual interest, paid to the tenant yearly — ORC §5321.16(A)
+- Must be returned within 30 days of lease termination and possession being returned, with an itemized list of deductions — ORC §5321.16(B)
+- If the landlord fails to provide the itemized list, the tenant may sue for the full amount withheld plus reasonable attorney's fees — ORC §5321.16(C)
+
+Entry Rights:
+- Landlord must give at least 24 hours notice and enter only at reasonable times — ORC §5321.04
+- Violating entry rights lets the tenant recover actual damages, get injunctive relief, or terminate the lease — ORC §5321.04(B)
+
+Other Tenant Protections:
+- Self-help evictions are illegal — no shutting off utilities, changing locks, or removing belongings without a court order — ORC §5321.15
+- Retaliation (raising rent, cutting services, or evicting because a tenant exercised legal rights) is prohibited — ORC §5321.02
+- A court may void an entire lease, or any clause, found to be unconscionable — ORC §5321.14
+
+Illegal Clauses in Ohio — ORC §5321.13, "Terms Prohibited in Rental Agreement":
+- A warrant of attorney to confess judgment
+- A one-sided attorney's fees clause (requiring only the tenant to pay the landlord's fees)
+- Tenant waiving the landlord's liability or agreeing to indemnify the landlord
+- Tenant waiving the landlord's statutory duty to keep the premises fit and habitable
+- Any provision of Chapter 5321 modified or waived by agreement is void, with narrow exceptions`,
+
+  WA: `WASHINGTON TENANT PROTECTION LAWS
+Sources: Residential Landlord-Tenant Act, RCW 59.18 | HB 1217 (2025 statewide rent stabilization law) | Washington Attorney General tenant guidance
+
+Security Deposit:
+- No statutory cap on the deposit amount, but it's only permitted if the rental agreement is in writing, and a signed move-in condition checklist is required — RCW 59.18.260
+- Must be returned within 30 days of lease termination and move-out — RCW 59.18.280
+- Nonrefundable fees must be separately designated in writing — RCW 59.18.285
+
+Rent Increases — HB 1217, effective May 7, 2025:
+- No rent increase of any amount is allowed during the first 12 months of a tenancy
+- After that, capped at 7% + CPI or 10%, whichever is lower, per rolling 12-month period (the exact figure is republished each year — 10% for 2025, 9.683% for 2026) — RCW 59.18.700
+- Requires 90 days written notice for any rent increase — RCW 59.18.700
+- Manufactured/mobile home increases are capped separately at 5%
+- Violations: tenant can recover up to 3x the overage; the WA Attorney General can fine up to $7,500 per violation
+
+Entry Rights:
+- At least 2 days written notice for routine (non-emergency) entry — RCW 59.18.150
+- 1 day notice for showings to prospective tenants/buyers
+- No notice required in a genuine emergency or apparent abandonment
+
+Habitability:
+- Landlord must keep the unit code-compliant, in good repair, with adequate heat and hot water, pest control, and must disclose known mold hazards — RCW 59.18.060
+
+Illegal Clauses in Washington — RCW 59.18.230 voids any lease clause that:
+- Waives the tenant's rights under the Residential Landlord-Tenant Act
+- Waives the landlord's duty to maintain a habitable unit
+- Releases the landlord from liability for injuries caused by the landlord's own negligence (exculpatory clause)`,
 };
 
 export function getLaws(state: string): string {

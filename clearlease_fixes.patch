@@ -1,0 +1,466 @@
+diff --git a/ClearLease/ClearLease/ContentView.swift b/ClearLease/ClearLease/ContentView.swift
+index 5b8b7bb..ae31aac 100644
+--- a/ClearLease/ClearLease/ContentView.swift
++++ b/ClearLease/ClearLease/ContentView.swift
+@@ -11,7 +11,10 @@ struct ContentView: View {
+         ("NY", "New York"),
+         ("TX", "Texas"),
+         ("FL", "Florida"),
+-        ("IL", "Illinois")
++        ("IL", "Illinois"),
++        ("PA", "Pennsylvania"),
++        ("OH", "Ohio"),
++        ("WA", "Washington")
+     ]
+ 
+     var body: some View {
+diff --git a/README.md b/README.md
+old mode 100755
+new mode 100644
+index e215bc4..a3703a8
+--- a/README.md
++++ b/README.md
+@@ -1,36 +1,52 @@
+-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
++# ClearLease
+ 
+-## Getting Started
++ClearLease reads a residential lease, flags the clauses worth worrying about, checks them against real tenant-protection law for the lease's state, and hands back a plain-English "fairness score" — so a renter doesn't have to be a lawyer to know what they're signing.
+ 
+-First, run the development server:
++## The problem
+ 
+-```bash
+-npm run dev
+-# or
+-yarn dev
+-# or
+-pnpm dev
+-# or
+-bun dev
+-```
++Most renters sign a lease they don't fully understand. Predatory clauses — illegal fees, waived rights, one-sided liability terms — are common, hard to spot in dense legal language, and hit low-income renters hardest, since they're the least likely to be able to afford a lawyer to check first. ClearLease is a first line of defense: upload a lease, get back exactly which clauses are risky, why, and what to do about it.
++
++## How it works
++
++1. **Validate** — a quick classifier check confirms the uploaded document is actually a residential lease before spending a full analysis on it.
++2. **Analyze** — the lease text and the tenant-protection law for the selected state are sent to an LLM with a structured prompt that returns a fairness score (0–100), a list of flagged clauses with severity ratings and exact quotes, and a list of things the lease actually gets right — not just a one-sided list of complaints.
++3. **Chat** — for any flagged clause, the renter can ask follow-up questions and get a plain-English answer scoped to that specific clause and state.
++
++Available as both a web app (Next.js) and a native iOS app (SwiftUI), sharing the same backend.
++
++## State coverage
++
++ClearLease currently covers 8 states with real, cited statutes: California, New York, Texas, Florida, Illinois, Pennsylvania, Ohio, and Washington. This is a deliberate choice, not an oversight — rather than let the AI guess at law for a state it doesn't actually have data for, the app only offers states where every claim can be traced to an actual statute. Expanding coverage means doing the legal research first, not just flipping on a state in the code.
+ 
+-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
++## Tech stack
+ 
+-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
++- **Web:** Next.js (App Router), TypeScript, Tailwind CSS
++- **iOS:** SwiftUI
++- **AI:** OpenAI API (gpt-4o-mini) with a structured JSON-output prompt
++- **PDF parsing:** pdf-parse
+ 
+-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
++## Running it locally
+ 
+-## Learn More
++```bash
++npm install
++```
++
++Create `.env.local` with:
++```
++OPENAI_API_KEY=your-key-here
++```
+ 
+-To learn more about Next.js, take a look at the following resources:
++Then:
++```bash
++npm run dev
++```
+ 
+-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
++The iOS app lives in `ClearLease/` and opens directly in Xcode — point `APIService.swift` at your local dev server or deployed URL.
+ 
+-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
++## AI tool disclosure
+ 
+-## Deploy on Vercel
++This project was built with substantial help from Claude (Anthropic) and Claude Code, including code generation, debugging, and the state law research for this README's coverage list. Architecture decisions, feature scope, and the final review pass were mine.
+ 
+-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
++## Status
+ 
+-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
++Built for the Congressional App Challenge, 2026.
+diff --git a/package.json b/package.json
+index c9ca215..a9fc0d2 100755
+--- a/package.json
++++ b/package.json
+@@ -9,6 +9,8 @@
+     "lint": "eslint"
+   },
+   "dependencies": {
++    "@upstash/ratelimit": "^2.0.5",
++    "@upstash/redis": "^1.34.3",
+     "jspdf": "^4.2.1",
+     "next": "16.2.6",
+     "openai": "^6.39.1",
+diff --git a/src/app/api/analyze/route.ts b/src/app/api/analyze/route.ts
+index 64c01ab..a6f1b8e 100755
+--- a/src/app/api/analyze/route.ts
++++ b/src/app/api/analyze/route.ts
+@@ -2,13 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
+ import OpenAI from "openai";
+ import { buildSystemPrompt } from "@/lib/prompt";
+ import { getLaws } from "@/lib/stateLaws";
++import { checkRateLimit } from "@/lib/rateLimit";
+ 
+ const openai = new OpenAI({
+   apiKey: process.env.OPENAI_API_KEY,
+ });
+ 
++// gpt-4o-mini's context window comfortably fits far more than the old
++// 12,000-character cap, which was silently cutting off longer leases
++// (roughly 4-5 pages) with no indication to the user that anything past
++// that point — often where indemnification and dispute-resolution clauses
++// live — was never analyzed at all.
++const MAX_CHARS = 60000;
++
+ export async function POST(req: NextRequest) {
+   try {
++    const allowed = await checkRateLimit(req);
++    if (!allowed) {
++      return NextResponse.json(
++        { error: "Too many requests. Please wait a minute and try again." },
++        { status: 429 }
++      );
++    }
++
+     const { leaseText, state } = await req.json();
+ 
+     if (!leaseText || !state) {
+@@ -18,6 +34,9 @@ export async function POST(req: NextRequest) {
+       );
+     }
+ 
++    const wasTruncated = leaseText.length > MAX_CHARS;
++    const textToAnalyze = leaseText.slice(0, MAX_CHARS);
++
+     const laws = getLaws(state);
+     const systemPrompt = buildSystemPrompt(state, laws);
+ 
+@@ -25,7 +44,7 @@ export async function POST(req: NextRequest) {
+       model: "gpt-4o-mini",
+       messages: [
+         { role: "system", content: systemPrompt },
+-        { role: "user", content: `Analyze this lease:\n\n${leaseText.slice(0, 12000)}` },
++        { role: "user", content: `Analyze this lease:\n\n${textToAnalyze}` },
+       ],
+       response_format: { type: "json_object" },
+       temperature: 0.2,
+@@ -33,6 +52,7 @@ export async function POST(req: NextRequest) {
+ 
+     const raw = response.choices[0].message.content ?? "{}";
+     const analysis = JSON.parse(raw);
++    analysis.wasTruncated = wasTruncated;
+ 
+     return NextResponse.json(analysis);
+   } catch (err) {
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index 6a7cac9..6a74220 100755
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -1,37 +1,46 @@
+-import { NextRequest, NextResponse } from "next/server";
+-import OpenAI from "openai";
+-
+-const openai = new OpenAI({
+-  apiKey: process.env.OPENAI_API_KEY,
+-});
+-
+-export async function POST(req: NextRequest) {
+-  try {
+-    const { messages, clauseText, state } = await req.json();
+-
+-    const systemPrompt = `You are a tenant-rights legal assistant helping a renter understand a specific clause in their lease for the state of ${state}.
+-
+-The clause in question is:
+-"${clauseText}"
+-
+-Answer questions about this clause clearly and in plain English. Be concise — 2-4 sentences max unless the user asks for more detail. If something is potentially illegal or worth negotiating, say so directly. You are not a lawyer and cannot provide formal legal advice, but you can explain what clauses mean and what options the renter has.`;
+-
+-    const response = await openai.chat.completions.create({
+-      model: "gpt-4o-mini",
+-      messages: [
+-        { role: "system", content: systemPrompt },
+-        ...messages,
+-      ],
+-      temperature: 0.3,
+-    });
+-
+-    const reply = response.choices[0].message.content ?? "";
+-    return NextResponse.json({ reply });
+-  } catch (err) {
+-    console.error(err);
+-    return NextResponse.json(
+-      { error: "Chat failed. Try again." },
+-      { status: 500 }
+-    );
+-  }
++import { NextRequest, NextResponse } from "next/server";
++import OpenAI from "openai";
++import { checkRateLimit } from "@/lib/rateLimit";
++
++const openai = new OpenAI({
++  apiKey: process.env.OPENAI_API_KEY,
++});
++
++export async function POST(req: NextRequest) {
++  try {
++    const allowed = await checkRateLimit(req);
++    if (!allowed) {
++      return NextResponse.json(
++        { error: "Too many requests. Please wait a minute and try again." },
++        { status: 429 }
++      );
++    }
++
++    const { messages, clauseText, state } = await req.json();
++
++    const systemPrompt = `You are a tenant-rights legal assistant helping a renter understand a specific clause in their lease for the state of ${state}.
++
++The clause in question is:
++"${clauseText}"
++
++Answer questions about this clause clearly and in plain English. Be concise — 2-4 sentences max unless the user asks for more detail. If something is potentially illegal or worth negotiating, say so directly. You are not a lawyer and cannot provide formal legal advice, but you can explain what clauses mean and what options the renter has.`;
++
++    const response = await openai.chat.completions.create({
++      model: "gpt-4o-mini",
++      messages: [
++        { role: "system", content: systemPrompt },
++        ...messages,
++      ],
++      temperature: 0.3,
++    });
++
++    const reply = response.choices[0].message.content ?? "";
++    return NextResponse.json({ reply });
++  } catch (err) {
++    console.error(err);
++    return NextResponse.json(
++      { error: "Chat failed. Try again." },
++      { status: 500 }
++    );
++  }
+ }
+\ No newline at end of file
+diff --git a/src/app/api/test/route.ts b/src/app/api/test/route.ts
+deleted file mode 100755
+index a083973..0000000
+--- a/src/app/api/test/route.ts
++++ /dev/null
+@@ -1,8 +0,0 @@
+-import { NextResponse } from "next/server";
+-
+-export async function GET() {
+-  return NextResponse.json({
+-    hasKey: !!process.env.OPENAI_API_KEY,
+-    keyPrefix: process.env.OPENAI_API_KEY?.slice(0, 7),
+-  });
+-}
+\ No newline at end of file
+diff --git a/src/components/Results.tsx b/src/components/Results.tsx
+index dc10bb6..101d332 100755
+--- a/src/components/Results.tsx
++++ b/src/components/Results.tsx
+@@ -16,6 +16,7 @@ interface Analysis {
+   summary: string;
+   flags: Flag[];
+   positives: string[];
++  wasTruncated?: boolean;
+ }
+ 
+ interface Props {
+@@ -71,6 +72,11 @@ export default function Results({ data, state }: Props) {
+         <p className="text-sm text-[#555] mt-4 max-w-lg mx-auto leading-relaxed">
+           {data.summary}
+         </p>
++        {data.wasTruncated && (
++          <p className="text-xs text-[#b87333] mt-3 max-w-lg mx-auto leading-relaxed">
++            ⚠ This lease was long enough that only the first portion was analyzed — later clauses may not be reflected above.
++          </p>
++        )}
+       </div>
+ 
+       <div className="h-px bg-[#242424]" />
+diff --git a/src/components/UploadForm.tsx b/src/components/UploadForm.tsx
+index 00c1851..ac93af4 100755
+--- a/src/components/UploadForm.tsx
++++ b/src/components/UploadForm.tsx
+@@ -8,6 +8,9 @@ const STATES = [
+   { code: "TX", name: "Texas" },
+   { code: "FL", name: "Florida" },
+   { code: "IL", name: "Illinois" },
++  { code: "PA", name: "Pennsylvania" },
++  { code: "OH", name: "Ohio" },
++  { code: "WA", name: "Washington" },
+ ];
+ 
+ interface Props {
+diff --git a/src/lib/rateLimit.ts b/src/lib/rateLimit.ts
+new file mode 100644
+index 0000000..f6539d5
+--- /dev/null
++++ b/src/lib/rateLimit.ts
+@@ -0,0 +1,49 @@
++import { NextRequest } from "next/server";
++
++// Protects routes that call the OpenAI API (which costs money) from being
++// hammered by bots or scripts that find the public URL. Uses Upstash's free
++// Redis tier once configured. Until UPSTASH_REDIS_REST_URL and
++// UPSTASH_REDIS_REST_TOKEN are set in your environment, this quietly allows
++// every request through — so the app still works before you finish setup,
++// it just isn't protected yet.
++//
++// Setup: sign up at upstash.com (free tier), create a Redis database, copy
++// its REST URL and token into .env.local:
++//   UPSTASH_REDIS_REST_URL=...
++//   UPSTASH_REDIS_REST_TOKEN=...
++// Then: npm install @upstash/ratelimit @upstash/redis
++
++let limiter: import("@upstash/ratelimit").Ratelimit | null = null;
++
++async function getLimiter() {
++  if (limiter) return limiter;
++  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
++    return null;
++  }
++  const { Ratelimit } = await import("@upstash/ratelimit");
++  const { Redis } = await import("@upstash/redis");
++  limiter = new Ratelimit({
++    redis: Redis.fromEnv(),
++    // 10 requests per 60 seconds per IP — generous for a real user
++    // clicking through the app, tight enough to stop scripted abuse.
++    limiter: Ratelimit.slidingWindow(10, "60 s"),
++  });
++  return limiter;
++}
++
++/**
++ * Returns true if the request should be allowed, false if it's been rate
++ * limited. Call this at the top of any route that calls OpenAI.
++ */
++export async function checkRateLimit(req: NextRequest): Promise<boolean> {
++  const rl = await getLimiter();
++  if (!rl) return true; // not configured yet — allow everything
++
++  const ip =
++    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
++    req.headers.get("x-real-ip") ??
++    "unknown";
++
++  const { success } = await rl.limit(ip);
++  return success;
++}
+diff --git a/src/lib/stateLaws.ts b/src/lib/stateLaws.ts
+index 3b0dec2..6b8d3b3 100755
+--- a/src/lib/stateLaws.ts
++++ b/src/lib/stateLaws.ts
+@@ -177,8 +177,91 @@ Illegal Clauses in Illinois:
+ - Waiving implied warranty of habitability
+ - Confession of judgment clauses
+ - One-sided attorney fees without reciprocity`,
+-};
+ 
++  PA: `PENNSYLVANIA TENANT PROTECTION LAWS
++Sources: PA Landlord and Tenant Act of 1951, 68 P.S. §§250.101-250.602 (codes maintained by PA General Assembly) | Community Legal Services of Philadelphia | Philadelphia Code §9-804 (local)
++
++Security Deposit:
++- Capped at 2 months' rent during the first year of tenancy — 68 P.S. §250.511a
++- Drops to 1 month's rent starting the second year
++- After 5+ years of continuous occupancy, the deposit amount may not be increased even if rent rises — 68 P.S. §250.511a
++- Deposits over $100 must be escrowed; after 2 years they must earn interest (minus a 1% admin fee) payable to the tenant
++- Must be returned within 30 days of lease end with an itemized list of deductions — 68 P.S. §250.512
++- Bad-faith withholding entitles the tenant to double damages — 68 P.S. §250.512
++
++Rent Increases:
++- No statewide cap on the amount of a rent increase
++- No statewide minimum notice period between lease terms — this is governed entirely by the lease itself unless the property is in Philadelphia
++- Philadelphia only: 30 days notice required (leases under 1 year) or 60 days (1 year+) — Philadelphia Code §9-804
++
++Entry Rights:
++- Pennsylvania has NO statute setting a required notice period or valid reasons for landlord entry — unusually landlord-favorable compared to most states
++- Entry terms are set entirely by the lease itself, backed only by the implied "covenant of quiet enjoyment"
++- 24 hours notice is a common informal practice but is NOT required by state law — a lease silent on entry is not, by itself, a violation
++
++Habitability:
++- Implied warranty of habitability recognized under PA case law (Pugh v. Holmes, 1979) — landlord must maintain the unit fit for living
++- Tenant may withhold rent or repair-and-deduct for serious defects, but must follow strict pre-notice procedures first
++
++Illegal Clauses in Pennsylvania:
++- Confession of judgment / warrant of attorney clauses in a residential lease — banned; enforceable only in commercial leases. Including one in a consumer lease violates PA's Unfair Trade Practices and Consumer Protection Law, entitling the tenant to triple damages and attorney's fees
++- Waiving the landlord's duty to maintain a habitable unit (post-Pugh v. Holmes)
++- Retaliating against a tenant for joining a tenant union — 68 P.S. §250.205`,
++
++  OH: `OHIO TENANT PROTECTION LAWS
++Sources: Ohio Revised Code Chapter 5321 (codes.ohio.gov)
++
++Security Deposit:
++- No statutory cap on the amount a landlord can charge
++- If held 6+ months, the portion of the deposit over $50 or 1 month's rent (whichever is greater) must earn 5% annual interest, paid to the tenant yearly — ORC §5321.16(A)
++- Must be returned within 30 days of lease termination and possession being returned, with an itemized list of deductions — ORC §5321.16(B)
++- If the landlord fails to provide the itemized list, the tenant may sue for the full amount withheld plus reasonable attorney's fees — ORC §5321.16(C)
++
++Entry Rights:
++- Landlord must give at least 24 hours notice and enter only at reasonable times — ORC §5321.04
++- Violating entry rights lets the tenant recover actual damages, get injunctive relief, or terminate the lease — ORC §5321.04(B)
++
++Other Tenant Protections:
++- Self-help evictions are illegal — no shutting off utilities, changing locks, or removing belongings without a court order — ORC §5321.15
++- Retaliation (raising rent, cutting services, or evicting because a tenant exercised legal rights) is prohibited — ORC §5321.02
++- A court may void an entire lease, or any clause, found to be unconscionable — ORC §5321.14
++
++Illegal Clauses in Ohio — ORC §5321.13, "Terms Prohibited in Rental Agreement":
++- A warrant of attorney to confess judgment
++- A one-sided attorney's fees clause (requiring only the tenant to pay the landlord's fees)
++- Tenant waiving the landlord's liability or agreeing to indemnify the landlord
++- Tenant waiving the landlord's statutory duty to keep the premises fit and habitable
++- Any provision of Chapter 5321 modified or waived by agreement is void, with narrow exceptions`,
++
++  WA: `WASHINGTON TENANT PROTECTION LAWS
++Sources: Residential Landlord-Tenant Act, RCW 59.18 | HB 1217 (2025 statewide rent stabilization law) | Washington Attorney General tenant guidance
++
++Security Deposit:
++- No statutory cap on the deposit amount, but it's only permitted if the rental agreement is in writing, and a signed move-in condition checklist is required — RCW 59.18.260
++- Must be returned within 30 days of lease termination and move-out — RCW 59.18.280
++- Nonrefundable fees must be separately designated in writing — RCW 59.18.285
++
++Rent Increases — HB 1217, effective May 7, 2025:
++- No rent increase of any amount is allowed during the first 12 months of a tenancy
++- After that, capped at 7% + CPI or 10%, whichever is lower, per rolling 12-month period (the exact figure is republished each year — 10% for 2025, 9.683% for 2026) — RCW 59.18.700
++- Requires 90 days written notice for any rent increase — RCW 59.18.700
++- Manufactured/mobile home increases are capped separately at 5%
++- Violations: tenant can recover up to 3x the overage; the WA Attorney General can fine up to $7,500 per violation
++
++Entry Rights:
++- At least 2 days written notice for routine (non-emergency) entry — RCW 59.18.150
++- 1 day notice for showings to prospective tenants/buyers
++- No notice required in a genuine emergency or apparent abandonment
++
++Habitability:
++- Landlord must keep the unit code-compliant, in good repair, with adequate heat and hot water, pest control, and must disclose known mold hazards — RCW 59.18.060
++
++Illegal Clauses in Washington — RCW 59.18.230 voids any lease clause that:
++- Waives the tenant's rights under the Residential Landlord-Tenant Act
++- Waives the landlord's duty to maintain a habitable unit
++- Releases the landlord from liability for injuries caused by the landlord's own negligence (exculpatory clause)`,
++};
++
+ export function getLaws(state: string): string {
+   return stateLaws[state] ?? "No specific state laws found. Apply general US tenant protection principles and federal law including the Fair Housing Act.";
+ }
+\ No newline at end of file

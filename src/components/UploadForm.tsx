@@ -8,6 +8,9 @@ const STATES = [
   { code: "TX", name: "Texas" },
   { code: "FL", name: "Florida" },
   { code: "IL", name: "Illinois" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "OH", name: "Ohio" },
+  { code: "WA", name: "Washington" },
 ];
 
 interface Props {

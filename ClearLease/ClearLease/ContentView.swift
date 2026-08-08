@@ -11,7 +11,10 @@ struct ContentView: View {
         ("NY", "New York"),
         ("TX", "Texas"),
         ("FL", "Florida"),
-        ("IL", "Illinois")
+        ("IL", "Illinois"),
+        ("PA", "Pennsylvania"),
+        ("OH", "Ohio"),
+        ("WA", "Washington")
     ]
 
     var body: some View {

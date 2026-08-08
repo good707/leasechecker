@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClearLease
 
-## Getting Started
+ClearLease reads a residential lease, flags the clauses worth worrying about, checks them against real tenant-protection law for the lease's state, and hands back a plain-English "fairness score" — so a renter doesn't have to be a lawyer to know what they're signing.
 
-First, run the development server:
+## The problem
+
+Most renters sign a lease they don't fully understand. Predatory clauses — illegal fees, waived rights, one-sided liability terms — are common, hard to spot in dense legal language, and hit low-income renters hardest, since they're the least likely to be able to afford a lawyer to check first. ClearLease is a first line of defense: upload a lease, get back exactly which clauses are risky, why, and what to do about it.
+
+## How it works
+
+1. **Validate** — a quick classifier check confirms the uploaded document is actually a residential lease before spending a full analysis on it.
+2. **Analyze** — the lease text and the tenant-protection law for the selected state are sent to an LLM with a structured prompt that returns a fairness score (0–100), a list of flagged clauses with severity ratings and exact quotes, and a list of things the lease actually gets right — not just a one-sided list of complaints.
+3. **Chat** — for any flagged clause, the renter can ask follow-up questions and get a plain-English answer scoped to that specific clause and state.
+
+Available as both a web app (Next.js) and a native iOS app (SwiftUI), sharing the same backend.
+
+## State coverage
+
+ClearLease currently covers 8 states with real, cited statutes: California, New York, Texas, Florida, Illinois, Pennsylvania, Ohio, and Washington. This is a deliberate choice, not an oversight — rather than let the AI guess at law for a state it doesn't actually have data for, the app only offers states where every claim can be traced to an actual statute. Expanding coverage means doing the legal research first, not just flipping on a state in the code.
+
+## Tech stack
+
+- **Web:** Next.js (App Router), TypeScript, Tailwind CSS
+- **iOS:** SwiftUI
+- **AI:** OpenAI API (gpt-4o-mini) with a structured JSON-output prompt
+- **PDF parsing:** pdf-parse
+
+## Running it locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` with:
+```
+OPENAI_API_KEY=your-key-here
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Then:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The iOS app lives in `ClearLease/` and opens directly in Xcode — point `APIService.swift` at your local dev server or deployed URL.
 
-## Learn More
+## AI tool disclosure
 
-To learn more about Next.js, take a look at the following resources:
+This project was built with substantial help from Claude (Anthropic) and Claude Code, including code generation, debugging, and the state law research for this README's coverage list. Architecture decisions, feature scope, and the final review pass were mine.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Status
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built for the Congressional App Challenge, 2026.

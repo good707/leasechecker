@@ -16,6 +16,7 @@ interface Analysis {
   summary: string;
   flags: Flag[];
   positives: string[];
+  wasTruncated?: boolean;
 }
 
 interface Props {
@@ -71,6 +72,11 @@ export default function Results({ data, state }: Props) {
         <p className="text-sm text-[#555] mt-4 max-w-lg mx-auto leading-relaxed">
           {data.summary}
         </p>
+        {data.wasTruncated && (
+          <p className="text-xs text-[#b87333] mt-3 max-w-lg mx-auto leading-relaxed">
+            ⚠ This lease was long enough that only the first portion was analyzed — later clauses may not be reflected above.
+          </p>
+        )}
       </div>
 
       <div className="h-px bg-[#242424]" />
