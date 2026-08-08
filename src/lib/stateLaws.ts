@@ -244,7 +244,7 @@ Security Deposit:
 Rent Increases — HB 1217, effective May 7, 2025:
 - No rent increase of any amount is allowed during the first 12 months of a tenancy
 - After that, capped at 7% + CPI or 10%, whichever is lower, per rolling 12-month period (the exact figure is republished each year — 10% for 2025, 9.683% for 2026) — RCW 59.18.700
-- Requires 90 days written notice for any rent increase — RCW 59.18.700
+- Requires 90 days written notice for any rent increase — RCW 59.18.140(3)(a)
 - Manufactured/mobile home increases are capped separately at 5%
 - Violations: tenant can recover up to 3x the overage; the WA Attorney General can fine up to $7,500 per violation
 
