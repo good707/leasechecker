@@ -204,7 +204,7 @@ Habitability:
 - Tenant may withhold rent or repair-and-deduct for serious defects, but must follow strict pre-notice procedures first
 
 Illegal Clauses in Pennsylvania:
-- Confession of judgment / warrant of attorney clauses in a residential lease — banned; enforceable only in commercial leases. Including one in a consumer lease violates PA's Unfair Trade Practices and Consumer Protection Law, entitling the tenant to triple damages and attorney's fees
+- Confession of judgment / warrant of attorney clauses in a residential lease — banned since 1996 amendments to the Pennsylvania Rules of Civil Procedure (Pa.R.C.P. 2950, 2970), which bar entry of a confessed judgment, for money or for possession, arising from a residential lease. Enforceable only in commercial leases
 - Waiving the landlord's duty to maintain a habitable unit (post-Pugh v. Holmes)
 - Retaliating against a tenant for joining a tenant union — 68 P.S. §250.205`,
 
